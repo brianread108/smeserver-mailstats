@@ -13,3 +13,7 @@ mailstats.cron is the cron file used to run the mailstats perl program every nig
 
 Details about the use of the package here:
 https://wiki.contribs.org/Mailstats
+
+mailstats uses the HTML::Template perl package from the epel repo installed by:
+
+yum install perl-HTML-Template --enablerepo=epel
