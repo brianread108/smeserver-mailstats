@@ -9,6 +9,8 @@ mailstats.pl is the WIP html enhanced version (with a better name) it is based o
 
 mailstats-detail.php is the server side php which is used to display log file contents on a webpage (hosted locally on the SMEServer)
 
+mailstats.css is the default css file for the details webpage (I intend that this can be user enhanced)
+
 mailstats.cron is the cron file used to run the mailstats perl program every night. Placed in /etc/cron.d
 
 Details about the use of the package here:
