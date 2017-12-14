@@ -1,5 +1,5 @@
 # smeserver-mailstats
-Code for the mailstats contrib on SMEServer (aka Koozali server)
+Code for the mailstats contrib on SMEServer (aka Koozali server http://www.koozali.org/ )
 
 .tmpl files are the html template files used as a template to generate the html.
 
