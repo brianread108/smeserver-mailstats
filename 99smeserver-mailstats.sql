@@ -90,6 +90,35 @@ CREATE TABLE IF NOT EXISTS `time` (
   PRIMARY KEY  (`timeid`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+CREATE TABLE IF NOT EXISTS `LogData` (
+  `LogData_id` int(12) NOT NULL AUTO_INCREMENT,
+  `Log64n` varchar(20) NOT NULL,
+  `MailId` int(11) NOT NULL,
+  `Sequence` smallint(6) NOT NULL,
+  `LogStr` text NOT NULL,
+  `dateid` int(11) NOT NULL,
+  `servername` varchar(30) NOT NULL,
+  PRIMARY KEY (`LogData_id`),
+  KEY `MailId` (`MailId`),
+  KEY `dateid` (`dateid`),
+  KEY `servername` (`servername`),
+  KEY `Sequence` (`Sequence`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=12988787 ;
+
+
+CREATE TABLE IF NOT EXISTS `LoglinesInCount` (
+  `LoglinesInCount_id` int(11) NOT NULL AUTO_INCREMENT,
+  `MailId` int(11) NOT NULL,
+  `Count_id` int(11) NOT NULL,
+  `dateid` int(11) NOT NULL,
+  `servername` varchar(30) NOT NULL,
+  PRIMARY KEY (`LoglinesInCount_id`),
+  KEY `Count_id` (`Count_id`),
+  KEY `MailId` (`MailId`),
+  KEY `servername` (`servername`),
+  KEY `dateid` (`dateid`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=712624 ;
+
 
 grant all privileges on mailstats.* to 'mailstats'@'localhost' identified by 'mailstats';
 
