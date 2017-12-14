@@ -1,0 +1,28 @@
+table {
+	border:2px solid;
+	border-collapse:collapse;
+}
+
+
+tr,td,th {
+	border:1px solid;
+}
+
+.mailstats-detail-1stcol{
+  width:174px;
+ }
+
+.stats-1stcol {
+	width:174px;
+}
+
+thead tr {
+  border-bottom :1px solid;
+}
+
+stats-head tr {
+  border-bottom:1px solid;
+}
+
+tr:nth-child(even) {background-color: #dfdfdf}
+	

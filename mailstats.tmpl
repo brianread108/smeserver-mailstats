@@ -1,0 +1,256 @@
+<!DOCTYPE html> <html>
+<head><title>Mailstats -<TMPL_VAR NAME=TODAYDATE></title>
+	<link rel='stylesheet' type='text/css' href='mailstats.css?aaa' />
+</head>
+<body>
+<p><a href="http://<TMPL_VAR NAME=DOMAIN>/mailstats/mailstats.html">See in browser</a></p>
+<h1><a name="section_1">SMEServer daily email statistics from <TMPL_VAR NAME=HOSTNAME> - <TMPL_VAR NAME=TODAYDATE></a></h1>
+<p><!---<TMPL_VAR NAME=VERSION><br />--->
+<TMPL_LOOP NAME=TOPBIT>
+  <TMPL_VAR NAME=f1><br />
+</TMPL_LOOP>
+</p>
+
+
+<table class="stats-table">
+<caption><h2><a name="section_2"><TMPL_VAR NAME=STATS_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=STATS_TABLE>
+  <TMPL_IF NAME=__first__>
+		<tr class='stats-head'>
+		<TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			<tr class='stats-foot'>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+			</tr>
+		<TMPL_ELSE>
+			<tr class='stats-rows'>
+			<TMPL_LOOP NAME=cols>
+					<TMPL_IF NAME="__first__">
+						<td class='stats-1stcol'><TMPL_VAR NAME=col></td>
+					<TMPL_ELSE>
+						<TMPL_IF NAME="__last__">
+							<td class='stats-lastcol'><TMPL_VAR NAME=col></td>
+						<TMPL_ELSE>
+							<td class='stats-col'>
+									<a href="http://<TMPL_VAR NAME=DOMAIN>/mailstats/mailstats-detail.php?id=<TMPL_VAR NAME=id>&co=<TMPL_VAR NAME=col>&ca=<TMPL_VAR NAME=categ>&hr=<TMPL_VAR NAME=hour>&dt=<TMPL_VAR NAME=DATEID>&sn=<TMPL_VAR NAME='SERVERNAME'>" target="_blank"><TMPL_VAR NAME=col></a>
+								</td>
+						</TMPL_IF>
+					</TMPL_IF>
+			</TMPL_LOOP>			
+			</tr>
+		</TMPL_IF>
+		</tr>
+	</TMPL_IF>
+</TMPL_LOOP>
+</table>
+
+<p>
+<TMPL_LOOP NAME=STATS_FOOTNOTE>
+  <TMPL_VAR NAME=f1><br />
+</TMPL_LOOP>
+</p>
+
+<table class="recip-table"><thead>
+<caption><h2><a name="section_3"><TMPL_VAR NAME=RECIP_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=RECIP_TABLE>
+	<tr>
+  <TMPL_IF NAME=__first__>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+		<TMPL_ELSE>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+	</TMPL_IF>
+			</tr>
+</TMPL_LOOP>
+</tfoot></table>
+
+<table class="virus-table"><thead>
+<caption><h2><a name="section_4"><TMPL_VAR NAME=VIRUS_CAPTION></a></h2></caption></thead>
+<tbody>
+<TMPL_LOOP NAME=VIRUS_TABLE>
+	<tr>
+		<TMPL_LOOP NAME=cols>
+				<TMPL_IF NAME="__first__">
+					<td><TMPL_VAR NAME=col></td>
+				<TMPL_ELSE>
+					<td><a href="<TMPL_VAR NAME=col>"><TMPL_VAR NAME=col></a></td>
+				</TMPL_IF>
+		</TMPL_LOOP>
+	</tr>
+</TMPL_LOOP>
+</tbody>
+</table>
+
+<table class="qpsmtpd-table"><thead>
+<caption><h2><a name="section_4"><TMPL_VAR NAME=QPSMTPD_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=QPSMTPD_TABLE>
+	<tr>
+  <TMPL_IF NAME=__first__>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+		<TMPL_ELSE>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+		</tr>
+	</TMPL_IF>
+</TMPL_LOOP>
+</tfoot></table>
+
+<table class="geoip-table"><thead>
+<caption><h2><a name="section_5"><TMPL_VAR NAME=GEOIP_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=GEOIP_TABLE>
+	<tr>
+  <TMPL_IF NAME=__first__>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+		<TMPL_ELSE>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+		</tr>
+	</TMPL_IF>
+</TMPL_LOOP>
+</tfoot></table>
+
+<table class="junkmail-table"><thead>
+<caption><h2><a name="section_6"><TMPL_VAR NAME=JUNKMAIL_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=JUNKMAIL_TABLE>
+	<tr>
+  <TMPL_IF NAME=__first__>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+		<TMPL_ELSE>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+		</tr>
+	</TMPL_IF>
+</TMPL_LOOP>
+</tfoot></table>
+
+<table class="blacklistsettings-table"><thead>
+<caption><h2><a name="section_7"><TMPL_VAR NAME=BLACKLISTsettings_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=BLACKLISTSETTINGS_TABLE>
+	<tr>
+  <TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+	<TMPL_ELSE>
+		<TMPL_LOOP NAME=cols>
+			<td><TMPL_VAR NAME=col></td>
+		</TMPL_LOOP>			
+	</TMPL_IF>
+	</tr>
+</TMPL_LOOP>
+</tfoot></table>
+
+
+<table class="blacklistuse-table"><thead>
+<caption><h2><a name="section_7"><TMPL_VAR NAME=BLACKLISTUSE_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=BLACKLISTUSE_TABLE>
+	<tr>
+  <TMPL_IF NAME=__first__>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+		<TMPL_ELSE>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+		</tr>
+	</TMPL_IF>
+</TMPL_LOOP>
+</tfoot></table>
+
+<table class="emails-table"><thead>
+<caption><h2><a name="section_9"><TMPL_VAR NAME=EMAILS_CAPTION></a></h2></caption>
+<TMPL_LOOP NAME=EMAILS_TABLE>
+	<tr>
+  <TMPL_IF NAME=__first__>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>
+		<TMPL_ELSE>
+			<TMPL_LOOP NAME=cols>
+					<TMPL_IF NAME="__last__">
+						<td><a href="mailto:<TMPL_VAR NAME=col>"><TMPL_VAR NAME=col></a></td>
+					<TMPL_ELSE>
+						<td><TMPL_VAR NAME=col></td>
+					</TMPL_IF>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+		</tr>
+	</TMPL_IF>
+</TMPL_LOOP>
+</tfoot></table>
+
+<footer><p><TMPL_VAR NAME=BOTTOMBIT></p></footer>
+</body></html>

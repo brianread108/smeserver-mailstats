@@ -1,0 +1,3 @@
+0    0   *    *   *    root    sleep $[ $RANDOM \% 3600 ]; perl /usr/bin/spamfilter-stats-7.pl /var/log/qpsmtpd/\@* /var/log/qpsmtpd/current /var/log/sqpsmtpd/\@* /var/log/sqpsmtpd/current
+
+
