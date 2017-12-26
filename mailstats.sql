@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Dec 14, 2017 at 11:43 AM
+-- Generation Time: Dec 26, 2017 at 10:44 AM
 -- Server version: 5.1.73
 -- PHP Version: 5.3.3
 
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `ColumnStats` (
   `count` bigint(20) NOT NULL DEFAULT '0',
   `servername` varchar(30) NOT NULL DEFAULT '',
   PRIMARY KEY (`ColumnStatsid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=219283 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=227505 ;
 
 -- --------------------------------------------------------
 
@@ -45,8 +45,9 @@ CREATE TABLE IF NOT EXISTS `ColumnStats` (
 CREATE TABLE IF NOT EXISTS `date` (
   `dateid` int(11) NOT NULL AUTO_INCREMENT,
   `date` date NOT NULL DEFAULT '0000-00-00',
+  `servername` varchar(30) NOT NULL,
   PRIMARY KEY (`dateid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=868 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=889 ;
 
 -- --------------------------------------------------------
 
@@ -65,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `domains` (
   `accept` bigint(20) NOT NULL DEFAULT '0',
   `servername` varchar(30) NOT NULL DEFAULT '',
   PRIMARY KEY (`domainsid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7557 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7935 ;
 
 -- --------------------------------------------------------
 
@@ -80,7 +81,7 @@ CREATE TABLE IF NOT EXISTS `JunkMailStats` (
   `count` bigint(20) NOT NULL DEFAULT '0',
   `servername` varchar(30) DEFAULT NULL,
   PRIMARY KEY (`JunkMailstatsid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5749 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6000 ;
 
 -- --------------------------------------------------------
 
@@ -101,7 +102,28 @@ CREATE TABLE IF NOT EXISTS `LogData` (
   KEY `dateid` (`dateid`),
   KEY `servername` (`servername`),
   KEY `Sequence` (`Sequence`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=12988787 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=14420906 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `LogDataSave`
+--
+
+CREATE TABLE IF NOT EXISTS `LogDataSave` (
+  `LogData_id` int(12) NOT NULL AUTO_INCREMENT,
+  `Log64n` varchar(20) NOT NULL,
+  `MailId` int(11) NOT NULL,
+  `Sequence` smallint(6) NOT NULL,
+  `LogStr` text NOT NULL,
+  `dateid` int(11) NOT NULL,
+  `servername` varchar(30) NOT NULL,
+  PRIMARY KEY (`LogData_id`),
+  KEY `MailId` (`MailId`),
+  KEY `dateid` (`dateid`),
+  KEY `servername` (`servername`),
+  KEY `Sequence` (`Sequence`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=13321601 ;
 
 -- --------------------------------------------------------
 
@@ -120,7 +142,26 @@ CREATE TABLE IF NOT EXISTS `LoglinesInCount` (
   KEY `MailId` (`MailId`),
   KEY `servername` (`servername`),
   KEY `dateid` (`dateid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=712624 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=809804 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `LoglinesInCountSave`
+--
+
+CREATE TABLE IF NOT EXISTS `LoglinesInCountSave` (
+  `LoglinesInCount_id` int(11) NOT NULL AUTO_INCREMENT,
+  `MailId` int(11) NOT NULL,
+  `Count_id` int(11) NOT NULL,
+  `dateid` int(11) NOT NULL,
+  `servername` varchar(30) NOT NULL,
+  PRIMARY KEY (`LoglinesInCount_id`),
+  KEY `Count_id` (`Count_id`),
+  KEY `MailId` (`MailId`),
+  KEY `servername` (`servername`),
+  KEY `dateid` (`dateid`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=716640 ;
 
 -- --------------------------------------------------------
 
@@ -135,7 +176,7 @@ CREATE TABLE IF NOT EXISTS `qpsmtpdcodes` (
   `count` bigint(20) NOT NULL DEFAULT '0',
   `servername` varchar(30) NOT NULL DEFAULT '',
   PRIMARY KEY (`qpsmtpdcodesid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=14911 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15576 ;
 
 -- --------------------------------------------------------
 
@@ -172,7 +213,7 @@ CREATE TABLE IF NOT EXISTS `SAscores` (
   `totalrecip` bigint(20) NOT NULL DEFAULT '0',
   `servername` varchar(30) NOT NULL DEFAULT '',
   PRIMARY KEY (`SAscoresid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=868 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=889 ;
 
 -- --------------------------------------------------------
 
