@@ -24,5 +24,35 @@ stats-head tr {
   border-bottom:1px solid;
 }
 
-tr:nth-child(even) {background-color: #dfdfdf}
+tr:nth-child(odd) {background-color: #dfdfdf}
+
+a.prevlink {
+  float: left;
+  width:33.33333%;
+  text-align:left;
+}
+div.divseeinbrowser {
+  float: left;
+  width:33.33333%;
+  text-align:center;
+}
+a.nextlink {
+ float: left;
+ width:33.33333%;
+ text-align:right;
+}​
 	
+.cssclass1 {background-color:#ffff99;} 
+.cssclass2 {background-color:lightcoral;}
+.cssclass3 {background-color:lightcyan;}
+.cssclass4 {background-color:lightgoldenrodyellow;}
+.cssclass5 {background-color:lightgray;}
+.cssclass6 {background-color:lightgreen;}
+.cssclass7 {background-color:lightpink;}
+.cssclass8 {background-color:lightsalmon;}
+.cssclass9 {background-color:lightseagreen;}
+.cssclass10 {background-color:lightskyblue;}
+.cssclass11 {background-color:lightslategray;}
+.cssclass12 {background-color:lightsteelblue;}
+
+p.cssvalid,p.htmlvalid {float:left;margin-right:20px)

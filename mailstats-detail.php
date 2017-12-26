@@ -12,7 +12,9 @@
 	error_reporting(E_ALL & ~E_DEPRECATED);
 	ini_set("log_errors", 1);
 	ini_set("error_log", "php-error.log");
-
+	
+	$maxcssclasses = 13;
+	
 	function tai64_to_timestamp($tai64_number){
 		/*** take out leading @ and the top bit ***/
 		$tai64_number = str_replace('@4', '0', $tai64_number);
@@ -110,9 +112,13 @@
 	for ($i = 0; $i < $tablemetas; $i++) { if (intval($i/2)*2 == $i) unset($tablemeta[$i]);}
 	# and re-index
 	$tablemeta = array_values($tablemeta);
+	#wh_log(print_r($tablemeta,true));
 	$i = 0;
 	$numlogterse = 0;
 	$meta["serveranddate"] = "No results found";
+	$logdataids = array();
+	$cntclassesused = -1;
+	$Lastmailid = 0;
 	foreach ($rows as $row){
 		if ($i == 0) $meta["serveranddate"] = $servername." - ".$row["date"];
 		#Remove tai64n number from front:
@@ -128,7 +134,15 @@
 		$mailid = $row["Mailid"];
 		#$meta["when$i"] = $tai64n."($dateid) - ($logdataid) ($mailid)";
 		$meta["when$i"] = $tai64n;
-		$meta["contents$i"] = $row["LogStr"];
+		$meta["contents$i"] = htmlspecialchars($row["LogStr"]);
+		#get cssclass for this id
+		$connectionid = substr($row["LogStr"],3,4);
+		if ($connectionid != $Lastconnectionid) {
+			$cntclassesused = ($cntclassesused+1) % $maxcssclasses;
+			$Lastconnectionid = $connectionid;
+			#wh_log("connectionid:$connectionid");
+		}
+		$meta["cssclass$i"]  = "cssclass$cntclassesused";
 		# and write line back to html using those metas
 		$tablemetas = count($tablemeta);
 		for ($j = 0; $j < $tablemetas; $j++) { $replacetablemeta[$j] = $tablemeta[$j]."$i";} #Create the new metas
@@ -142,6 +156,10 @@
 	$meta["now"] = date("Y-m-d g:i:s");
 	$meta["counts"] = "$i records $numlogterse log summaries ($emailcount)";
 	$html = apply_meta($meta,$html);
+	#Remove all tabs and newlines
+	$html = preg_replace("/\t|\n/","",$html);
+	#and add in newline for each row 
+	$html = preg_replace("/(<\/tr>|<br \/>)/","$1\n",$html);
 	print $html;
 	$db=null;
 	#wh_log_close("done");
