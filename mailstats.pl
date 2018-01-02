@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #############################################################################
 #
-# This script provides daily SpamFilter statistics.
+# This script provides daily mailserver mail rejection and acceptance statistics.
 #
 # This script was originally developed
 # by Jesper Knudsen at http://sme.swerts-knudsen.dk
@@ -29,7 +29,8 @@
 # bjr - 21Dec16 - Further geoip fixes as suggested by Jean-Philippe Pialasse  - See Bug 9888
 # bjr - 07Aug17 - Fix up log items tags so that only relevant items shown on detail web page
 # bjr - 12Dec17 - Add in deleting old data in tables. - added servername to data table.
-# bjr - 16Dec17 - Add in date to html file name so that can keep previous versions
+# bjr - 16Dec17 - Add in date to html file name so that can keep previous versions - add in next and prev on web page
+# bjr - 23Dec17 - Lots of changes to html to make conformant and internally consistent
 #
 #
 #############################################################################
@@ -67,15 +68,17 @@
 # 4. Generate unique html page - keep up to daysKeepHTMLPage - add in next and prev to web page.
 # 5. Tag totals columns and rows seperatatly
 # 6. Check truncation of emails when no <> in email hit list table
-# 7. Colour code each set of logs for a connection.
+# 7. Colour code each set of logs for a connection - Done
 # 8. Build RPM (inc config webpage in /opt/mailstats (or somesuch place)
+# 9. Check formatting of text version
+# 10. Add in the links for all the other tables
+# 11. Add in links to wiki and also github
 #
 #
 # internal modules (part of core perl distribution)
 # Needs (if HTML set)
 # yum install perl-HTML-Template --enablerepo=epel
 # and need mailstats.tmpl in the same directory as the mailstats.pl
-# and need perl-Time-Piece - yum install perl-Time-Piece
 #
 use strict;
 use warnings;
@@ -126,6 +129,7 @@ my %opt = (
     mail => $cdb->get('mailstats')->prop('Email')
       || 'admin',                         # mailstats email recipient
     timezone => `date +%z`,
+    params => @ARGV
 );
 
 my $FetchmailIP = '127.0.0.200';    #Apparent Ip address of fetchmail deliveries
@@ -175,7 +179,7 @@ my %found_qpcodes  = ();
 my %found_SARules  = ();
 my %junkcount      = ();
 my %unrecog_plugin = ();
-my %blacklistURL   = ();     #Count of use of each balcklist rhsbl
+my %blacklistURL   = ();     #Count of use of each blacklist rhsbl/dnsbl/uribl
 my %usercounts     = ()
   ; #Count per received email of sucessful delivery, queued spam and deleted Spam, and rejected
 
@@ -213,8 +217,8 @@ my $CATKARMA        = "Karma";
 my $CATSPAMDEL = 'Del.Spam';
 my $CATSPAM    = 'Qued.Spam?';
 my $CATHAM     = 'Ham';
-my $CATTOTALS  = 'TOTALS';
-my $CATPERCENT = 'PERCENT';
+my $CATTOTALS  = 'Totals';
+my $CATPERCENT = 'Percent';
 my $CATDMARC   = "DMARC-Rej.";
 my $CATLOAD    = "Rej.Load";
 my @categs     = (
@@ -1298,6 +1302,7 @@ if ( !$disabled ) {
       "\n\n";
     my $version = "$0 Version : $opt{'version'}";
     push( @{$topbit}, { f1 => "$version\n" } );
+    push( @{$topbit}, { f1 => "Params : ".$opt{'params'}."\n"} );
     push(
         @{$topbit},
         {
@@ -1555,7 +1560,7 @@ if ( !$disabled ) {
                 if ( $finaldisplay[$ncateg] ) {
                     if ( $ncateg == 0 ) {
                         $Totals .=
-                          substr( 'TOTALS                                   ',
+                          substr( 'Totals                                   ',
                             0, $colwidth[$ncateg] - 2 );
 
 #$Percent .= substr('PERCENTAGES                              ',0,$colwidth[$ncateg]-1);
@@ -1770,7 +1775,9 @@ if ( !$disabled ) {
     # no SARules in latest qpsmtpd
     #    if ($enableSARules) {show_SARules_codes();}
     #    else {@{$SARules_table}={};}
-
+	#die($finaldisplay[$BadCountryCateg]);
+	#die($total_countries);
+	
     if ( $enableGeoiptable
         and ( ( $total_countries > 0 ) or $finaldisplay[$BadCountryCateg] ) )
     {
@@ -1963,7 +1970,7 @@ sub show_recip_usage {
     $recip_caption = "Incoming mails by recipient domains usage\n";
     print $recip_caption;
     my $line =
-"-------------------------------------------------------------------------------------------\n";
+"-----------------------------------------------------------------------------------------------\n";
     print $line;
     my $recip_titles;
     push( @{$recip_titles}, { col => sprintf( "%-28s", "Domains" ) } );
@@ -2032,7 +2039,7 @@ sub show_recip_usage {
         $perc2 = ( ( $total{'total'} + $morethanonercpt ) / $total{'total'} );
     }
 
-    push( @{$recip_totals}, { col => sprintf( "%-28s", "Total" ) } );
+    push( @{$recip_totals}, { col => sprintf( "%-28s", "Totals" ) } );
     push( @{$recip_totals}, { col => sprintf( "%-10s", "" ) } );
     push( @{$recip_totals}, { col => sprintf( "%6d",   $total{'total'} ) } );
     push( @{$recip_totals}, { col => sprintf( "%6d",   $total{'deny'} ) } );
@@ -2107,9 +2114,10 @@ sub show_qpsmtpd_codes
     $qpsmtpd_caption = "\nQpsmtpd codes league table:\n";
     print( $qpsmtpd_caption. $line );
     my $qpsmtpd_titles;
+    push( @{$qpsmtpd_titles}, { col => "Reason" } );
     push( @{$qpsmtpd_titles}, { col => "Count" } );
-    push( @{$qpsmtpd_titles}, { col => "\tPercent" } );
-    push( @{$qpsmtpd_titles}, { col => "\tReason" } );
+    push( @{$qpsmtpd_titles}, { col => "Percent" } );
+
     foreach my $str (@$qpsmtpd_titles) {
         print $$str{"col"} . "\t";
     }
@@ -2122,7 +2130,8 @@ sub show_qpsmtpd_codes
       )
     {
         my $qpsmtpd_cols;
-        push( @{$qpsmtpd_cols}, { col => $found_qpcodes{$qpcode} } );
+        push( @{$qpsmtpd_cols},  { col  => $qpcode } );
+        push( @{$qpsmtpd_cols}, { col => sprintf("%-5d",$found_qpcodes{$qpcode}) } );
         push(
             @{$qpsmtpd_cols},
             {
@@ -2130,7 +2139,7 @@ sub show_qpsmtpd_codes
                     $found_qpcodes{$qpcode} * 100 / $totalexamined )
             }
         );
-        push( @{$qpsmtpd_cols},  { col  => $qpcode } );
+
         push( @{$qpsmtpd_table}, { cols => $qpsmtpd_cols } );
         foreach my $str (@$qpsmtpd_cols) {
             print $$str{"col"} . "\t";
@@ -2138,6 +2147,18 @@ sub show_qpsmtpd_codes
         print "\n";
     }
     print($line);
+	my $qpsmtpd_cols;
+	push( @{$qpsmtpd_cols}, { col => "Totals" } );
+	push( @{$qpsmtpd_cols}, { col => "$totalexamined" } );
+	push( @{$qpsmtpd_cols},
+		{ col => sprintf( "%4d%%", 100 ) } );
+	foreach my $str (@$qpsmtpd_cols) {
+		print $$str{"col"}."\t";
+	}
+	print "\n";
+	push( @{$qpsmtpd_table}, { cols => $qpsmtpd_cols } );
+	print($line);
+
 }
 
 sub show_blacklist_counts
@@ -2148,53 +2169,87 @@ sub show_blacklist_counts
 
 {
     my $line = "------------------\n";
-    $blacklistsettings_caption = "\nBlacklist set:\n";
+    $blacklistsettings_caption = "\nBlacklists specified:\n";
     print $blacklistsettings_caption;
     print($line);
+    my $blacklistsettings_titles;
+    push( @{$blacklistsettings_titles}, { col => "Type" } );
+    push( @{$blacklistsettings_titles}, { col => "List" } );
+    foreach my $str (@$blacklistsettings_titles) {
+        print $$str{"col"} . "\t";
+    }
+    push( @{$blacklistsettings_table}, { cols => $blacklistsettings_titles } );
+    print( "\n" . $line );  
     my %lists =
-      ( RHSBL => "RBLList", URIBL => "UBLList", SBLList => "SBLList" );
+      ( RHSBL => "RBLList", URIBL => "UBLList", DNSBL => "SBLList" );
     foreach my $list ( keys %lists ) {
         if ( $cdb->get('qpsmtpd')->prop("$list") eq "enabled" ) {
-            my $blacklistsettings_cols;
-            push( @{$blacklistsettings_cols}, { col => "$list:" } );
-            push(
-                @{$blacklistsettings_cols},
-                { col => $cdb->get('qpsmtpd')->prop( $lists{$list} ) }
-            );
-            foreach my $str (@$blacklistsettings_cols) {
-                print $$str{"col"} . "\t";
-            }
-            push(
-                @{$blacklistsettings_table},
-                { cols => $blacklistsettings_cols }
-            );
-            print "\n";
+            my @listcontents = split(',',$cdb->get('qpsmtpd')->prop($lists{$list}));
+
+            #Remove empty entries
+            # Magic code taken from https://stackoverflow.com/questions/22722004/remove-empty-strings-in-perl-hash-of-arrays
+            #@$_ = grep defined && length, @$_ for values %listcontents; 
+            #foreach my $keys ( keys %listcontents) {
+		    #		$listcontents{$keys} = [grep { length $_ } @{$listcontents{$keys}}];
+			#}
+            foreach my $content (@listcontents){	
+				my $blacklistsettings_cols;
+				push( @{$blacklistsettings_cols}, { col => "$list" } );
+				push(
+					@{$blacklistsettings_cols},
+					{ col => $content }
+				);
+				push(
+					@{$blacklistsettings_table},
+					{ cols => $blacklistsettings_cols }
+				);
+
+				foreach my $str (@$blacklistsettings_cols) {
+					print $$str{"col"} . "\t";
+				}
+				print "\n";
+			}
         }
     }
     print($line);
+   	my $blacklistsettings_cols;
+	push( @{$blacklistsettings_cols}, { col => "" } );
+	push( @{$blacklistsettings_cols}, { col => "" } );
+	push(
+		@{$blacklistsettings_table},
+		{ cols => $blacklistsettings_cols }
+	);
+	foreach my $str (@$blacklistsettings_cols) {
+		print $$str{"col"};
+	}
+	print "\n";
+
     $blacklistuse_caption = "\nBlacklist use:\n";
     print $blacklistuse_caption;
     print($line);
     my $blacklistuse_titles;
-    push( @{$blacklistuse_titles}, { col => "Count" } );
-    push( @{$blacklistuse_titles}, { col => "\tURL" } );
+    push( @{$blacklistuse_titles}, { col => "URL" } );
+    push( @{$blacklistuse_titles}, { col => "\tCount" } );
 
     foreach my $str (@$blacklistuse_titles) {
         print $$str{"col"} . "\t";
     }
     push( @{$blacklistuse_table}, { cols => $blacklistuse_titles } );
     print( "\n" . $line );
+    my $blacklistURLcount = 0;
     foreach my $blcode (
         sort { $blacklistURL{$b} <=> $blacklistURL{$a} }
         keys %blacklistURL
       )
     {
         my $blacklistuse_cols;
+
+        push( @{$blacklistuse_cols}, { col => "\t$blcode" } );
         push(
             @{$blacklistuse_cols},
             { col => sprintf( '%3u', $blacklistURL{$blcode} ) }
         );
-        push( @{$blacklistuse_cols}, { col => "\t$blcode" } );
+        $blacklistURLcount = $blacklistURLcount + $blacklistURL{$blcode};
         foreach my $str (@$blacklistuse_cols) {
             print $$str{"col"} . "\t";
         }
@@ -2202,6 +2257,16 @@ sub show_blacklist_counts
         print "\n";
     }
     print($line);
+	my $blacklistuse_cols;
+	push( @{$blacklistuse_cols}, { col => "Totals" } );
+	push( @{$blacklistuse_cols}, { col => $blacklistURLcount } );
+	foreach my $str (@$blacklistuse_cols) {
+		print $$str{"col"};
+	}
+	print "\n";
+	push( @{$blacklistuse_table}, { cols => $blacklistuse_cols } );
+	print($line);
+
 }
 
 sub List_Junkmail {
@@ -2238,24 +2303,26 @@ sub List_Junkmail {
         print $junkmail_caption;
         print($line);
         my $junkmail_titles;
+        push( @{$junkmail_titles}, { col => "User" } );
         push( @{$junkmail_titles}, { col => "Count" } );
-        push( @{$junkmail_titles}, { col => "\tUser" } );
         foreach my $str (@$junkmail_titles) {
             print $$str{"col"} . "\t";
         }
         push( @{$junkmail_table}, { cols => $junkmail_titles } );
         print( "\n" . $line );
+        my $junkmailcount = 0;
         foreach my $thisuser (
             sort { $junkcount{$b} <=> $junkcount{$a} }
             keys %junkcount
           )
         {
             my $junkmail_cols;
+            $junkmailcount = $junkmailcount + $junkcount{$thisuser};
+            push( @{$junkmail_cols}, { col => "\t$thisuser" } );
             push(
                 @{$junkmail_cols},
                 { col => sprintf( "%d", $junkcount{$thisuser} ) }
             );
-            push( @{$junkmail_cols}, { col => "\t$thisuser" } );
             foreach my $str (@$junkmail_cols) {
                 print $$str{"col"};
             }
@@ -2263,6 +2330,16 @@ sub List_Junkmail {
             print "\n";
         }
         print($line);
+	    my $junkmail_cols;
+		push( @{$junkmail_cols}, { col => "Totals" } );
+		push( @{$junkmail_cols}, { col => $junkmailcount} );
+		foreach my $str (@$junkmail_cols) {
+			print $$str{"col"};
+		}
+		print "\n";
+		push( @{$junkmail_table}, { cols => $junkmail_cols } );
+		print($line);
+
     }
     else {
         print "***No junkmail folders with emails***\n";
@@ -2303,10 +2380,11 @@ sub show_user_stats
     print $emails_caption;
     print($line);
     my $emails_titles;
+    push( @{$emails_titles}, { col => "\tEmail Address" } );
     push( @{$emails_titles}, { col => "Queued" } );
     push( @{$emails_titles}, { col => "\tRejected" } );
     push( @{$emails_titles}, { col => "\tSpam tagged" } );
-    push( @{$emails_titles}, { col => "\tEmail Address" } );
+
 
     foreach my $str (@$emails_titles) {
         print $$str{"col"};
@@ -2319,6 +2397,9 @@ sub show_user_stats
       )
     {
         my $emails_cols;
+        my $usernomailto = $user;
+        $usernomailto =~ s/(\<|\>)//g;
+        push( @{$emails_cols}, { col => $usernomailto } );
         push(
             @{$emails_cols},
             { col => sprintf( '%3u', $usercounts{$user}{"queued"} ) . "\t" }
@@ -2333,9 +2414,6 @@ sub show_user_stats
             @{$emails_cols},
             { col => sprintf( '%3u', $usercounts{$user}{"spam"} ) . "\t\t" }
         );
-        my $usernomailto = $user;
-        $usernomailto =~ s/(\<|\>)//g;
-        push( @{$emails_cols}, { col => $usernomailto } );
         foreach my $str (@$emails_cols) {
             print $$str{"col"};
         }
@@ -2344,6 +2422,7 @@ sub show_user_stats
     }
     print($line);
     my $emails_footcols;
+    push( @{$emails_footcols}, { col => "Totals" } );
     push(
         @{$emails_footcols},
         { col => sprintf( '%3u', $totalqueued ) . "\t" }
@@ -2353,7 +2432,7 @@ sub show_user_stats
         { col => sprintf( '%3u', $totalrejected ) . "\t\t" }
     );
     push( @{$emails_footcols}, { col => sprintf( '%3u', $totalspam ) } );
-    push( @{$emails_footcols}, { col => "" } );
+
     foreach my $str (@$emails_footcols) {
         print $$str{"col"};
     }
@@ -2380,28 +2459,29 @@ sub show_Geoip_results
     else {
         $percentthreshold = 0.5;
     }
-    if ( $total_countries > 0 ) {
-        my $line = "---------------------------------------------\n";
-        $geoip_caption = "\nGeoip results: (cutoff at $percentthreshold%) \n";
-        print $geoip_caption;
-        print($line);
-        my $geoip_titles;
-        push( @{$geoip_titles}, { col => "Country" } );
-        push( @{$geoip_titles}, { col => "\tPercent" } );
-        push( @{$geoip_titles}, { col => "\tCount" } );
-        push( @{$geoip_titles}, { col => "\tRejected?" } );
+ 
+	my $line = "---------------------------------------------\n";
+	$geoip_caption = "\nGeoip results: (cutoff at $percentthreshold%) \n";
+	print $geoip_caption;
+	print($line);
+	my $geoip_titles;
+	push( @{$geoip_titles}, { col => "Country" } );
+	push( @{$geoip_titles}, { col => "\tCount" } );
+	push( @{$geoip_titles}, { col => "\tPercent" } );
 
-        foreach my $str (@$geoip_titles) {
-            print $$str{"col"};
-        }
-        push( @{$geoip_table}, { cols => $geoip_titles } );
-        print( "\n" . $line );
-        foreach my $country (
+	foreach my $str (@$geoip_titles) {
+		print $$str{"col"};
+	}
+	push( @{$geoip_table}, { cols => $geoip_titles } );
+	print( "\n" . $line );
+   
+    if ( $total_countries > 0 ) {
+         foreach my $country (
             sort { $found_countries{$b} <=> $found_countries{$a} }
             keys %found_countries
           )
         {
-            if ( $total_countries > 0 ) {
+			if ( $total_countries > 0 ) {
                 $percent = $found_countries{$country} * 100 / $total_countries;
                 $totalpercent = $totalpercent + $percent;
                 if ( index( $BadCountries, $country ) != -1 ) { $reject = "*"; }
@@ -2411,13 +2491,14 @@ sub show_Geoip_results
                     push( @{$geoip_cols}, { col => "$country\t\t" } );
                     push(
                         @{$geoip_cols},
-                        { col => sprintf( '%4.1f', $percent ) . "\t" }
-                    );
-                    push(
-                        @{$geoip_cols},
                         { col => "\t$found_countries{$country}" }
                     );
-                    push( @{$geoip_cols}, { col => "\t$reject" } );
+					my $percentcol = sprintf( '%4.1f%%', $percent );
+					$percentcol .= $reject;
+                    push(
+                        @{$geoip_cols},
+                        { col => $percentcol . "\t" }
+                    );
                     foreach my $str (@$geoip_cols) {
                         print $$str{"col"};
                     }
@@ -2445,11 +2526,10 @@ sub show_Geoip_results
 
         if ($showtotals) {
             my $geoip_cols;
-            push( @{$geoip_cols}, { col => "TOTALS\t\t" } );
-            push( @{$geoip_cols},
-                { col => sprintf( "%4.1f", $totalpercent ) } );
+            push( @{$geoip_cols}, { col => "Totals\t\t" } );
             push( @{$geoip_cols}, { col => "\t\t$total_countries" } );
-            push( @{$geoip_cols}, { col => "" } );
+            push( @{$geoip_cols},
+                { col => sprintf( "%5d%%", $totalpercent ) } );
             foreach my $str (@$geoip_cols) {
                 print $$str{"col"};
             }

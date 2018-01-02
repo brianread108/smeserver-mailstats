@@ -12,19 +12,20 @@ tr,td,th {
   width:174px;
  }
 
-.stats-1stcol {
-	width:174px;
-}
-
 thead tr {
-  border-bottom :1px solid;
+  border-bottom :2px solid;
+  color:black;
+  background-color:darkgrey;
 }
 
-stats-head tr {
-  border-bottom:1px solid;
-}
+tfoot tr {
+  border-top:2px solid;
+  color:black;
+  font-weight: bold;
+  background-color:darkgrey;
+ }
 
-tr:nth-child(odd) {background-color: #dfdfdf}
+tbody tr:nth-child(odd) {background-color: #dfdfdf}
 
 a.prevlink {
   float: left;

@@ -42,31 +42,32 @@
 <a class="nextlink" href="http://<TMPL_VAR NAME=DOMAIN>/mailstats/mailstats<TMPL_VAR NAME=TOMORROWDATE>.html">Next</a>
 </div>
 <h1><a>SMEServer daily email statistics from <TMPL_VAR NAME=HOSTNAME> - <TMPL_VAR NAME=TODAYDATE></a></h1>
-<p><!--<TMPL_VAR NAME=VERSION><br />-->
 <TMPL_LOOP NAME=TOPBIT>
   <TMPL_VAR NAME=f1><br />
 </TMPL_LOOP>
 </p>
 
-
 <table class="stats-table">
 <caption><h2><a><TMPL_VAR NAME=STATS_CAPTION></a></h2></caption>
+<thead>
 <TMPL_LOOP NAME=STATS_TABLE>
 	<TMPL_IF NAME=__first__>
-		<tr class='stats-head'>
+	<tr>
 		<TMPL_LOOP NAME=cols>
-				<th><TMPL_VAR NAME=col></th>
+			<th><TMPL_VAR NAME=col></th>
 		</TMPL_LOOP>
-		</tr>
+    </tr>
+    </thead>
+	<tbody>
 	<TMPL_ELSE>
 		<TMPL_IF NAME="__last__">
-			<tr class='stats-foot'>
+			</tbody><tfoot>
+		<tr>
 			<TMPL_LOOP NAME=cols>
-					<td><TMPL_VAR NAME=col></td>
+				<td><TMPL_VAR NAME=col></td>
 			</TMPL_LOOP>
-			</tr>
 		<TMPL_ELSE>
-			<tr class='stats-rows'>
+		<tr>
 			<TMPL_LOOP NAME=cols>
 					<TMPL_IF NAME="__first__">
 						<td class='stats-1stcol'><TMPL_VAR NAME=col></td>
@@ -77,14 +78,14 @@
 							<td class='stats-col'>
 									<a href="http://<TMPL_VAR NAME=DOMAIN>/mailstats/mailstats-detail.php?id=<TMPL_VAR NAME=id>&co=<TMPL_VAR NAME=col>&ca=<TMPL_VAR NAME=categ>&hr=<TMPL_VAR NAME=hour>&dt=<TMPL_VAR NAME=DATEID>&sn=<TMPL_VAR NAME='SERVERNAME'>" target="_blank"><TMPL_VAR NAME=col></a>
 								</td>
-						</TMPL_IF>
-					</TMPL_IF>
+						</TMPL_IF>			
+					</TMPL_IF>			
 			</TMPL_LOOP>			
-			</tr>
 		</TMPL_IF>
+	</tr>
 	</TMPL_IF>
 </TMPL_LOOP>
-</table>
+</tfoot></table>
 
 <p>
 <TMPL_LOOP NAME=STATS_FOOTNOTE>
@@ -204,6 +205,7 @@
 	</TMPL_IF>
 </TMPL_LOOP>
 </tfoot></table>
+<p>Note that the rows with a "*" are the ones rejected according to the country filter set.</p>
 </TMPL_IF>
 
 <TMPL_IF NAME="JUNKMAIL_CAPTION">
@@ -240,21 +242,30 @@
 <TMPL_IF NAME="BLACKLISTSETTINGS_CAPTION">
 <table class="blacklistsettings-table">
 <caption><h2><a><TMPL_VAR NAME=BLACKLISTsettings_CAPTION></a></h2></caption>
-<tbody>
+<thead>
 <TMPL_LOOP NAME=BLACKLISTSETTINGS_TABLE>
- <TMPL_IF NAME="__last__">
-			</tbody><tfoot>
+  <TMPL_IF NAME=__first__>
 	<tr>
- 			<TMPL_LOOP NAME=cols>
+    <TMPL_LOOP NAME=cols>
+				<th><TMPL_VAR NAME=col></th>
+    </TMPL_LOOP>
+    </tr>
+    </thead><tbody>
+  <TMPL_ELSE>
+		<TMPL_IF NAME="__last__">
+			</tbody><tfoot>
+			<tr>
+			<TMPL_LOOP NAME=cols>
 					<td><TMPL_VAR NAME=col></td>
 			</TMPL_LOOP>
-	<TMPL_ELSE>
-	<tr>
- 		<TMPL_LOOP NAME=cols>
-			<td><TMPL_VAR NAME=col></td>
-		</TMPL_LOOP>			
+		<TMPL_ELSE>
+			<tr>
+			<TMPL_LOOP NAME=cols>
+					<td><TMPL_VAR NAME=col></td>
+			</TMPL_LOOP>			
+		</TMPL_IF>
+		</tr>
 	</TMPL_IF>
-	</tr>
 </TMPL_LOOP>
 </tfoot></table>
 
@@ -310,7 +321,7 @@
 		<TMPL_ELSE>
 			<tr>
 			<TMPL_LOOP NAME=cols>
-					<TMPL_IF NAME="__last__">
+					<TMPL_IF NAME="__first__">
 						<td><a href="mailto:<TMPL_VAR NAME=col>"><TMPL_VAR NAME=col></a></td>
 					<TMPL_ELSE>
 						<td><TMPL_VAR NAME=col></td>
