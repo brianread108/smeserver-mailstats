@@ -129,9 +129,10 @@ my %opt = (
     mail => $cdb->get('mailstats')->prop('Email')
       || 'admin',                         # mailstats email recipient
     timezone => `date +%z`,
-    params => @ARGV
+    params => @ARGV						  # only shows first file
 );
 
+DECLARATIONS:
 my $FetchmailIP = '127.0.0.200';    #Apparent Ip address of fetchmail deliveries
 my $WebmailIP   = '127.0.0.1';      #Apparent Ip of Webmail sender
 my $localhost   = 'localhost';      #Apparent sender for webmail
@@ -309,6 +310,20 @@ my $emails_caption = "";
 my $emails_table;
 my $bottombit = "";
 
+#Base for unique count_id for each table type (used to identify the logs appertaining to the counts)
+my $STATS_BASE = 0;
+my $RECIP_COUNT_BASE = 1000;
+my $GEOIP_BASE = 2000;
+my $QPSMTPD_BASE = 3000;
+my $BLACKLIST_BASE = 4000;
+my $EMAIL_STATS_BASE = 5000;
+my $VIRUS_BASE = 6000;
+
+#and vars for creating a unique count_id, based on the countries found
+my $total_geoip_count_id = $GEOIP_BASE; #for the totals
+my $single_geoip_count_id = $total_geoip_count_id +1; #Base for each country found
+my %found_countries_count_ids = ();
+
 my $sendmsg;    #Used for wh_log to email log.
 
 my $dateid;
@@ -454,8 +469,7 @@ if ( $cdb->get('mailstats') ) {
 # Init the hashes
 my $nhour = floor( $start / 3600 );
 my $ncateg;
-my $count_id_index =
-  0;    #Unique count_id - might need to be setup a unique start.
+my $count_id_index = $STATS_BASE;    #Unique count_id - might need to be setup a unique start.
 while ( $nhour < $end / 3600 ) {
     $counts{$nhour}   = ();
     $count_id{$nhour} = ();
@@ -585,8 +599,14 @@ LINE: while (<>) {
 
     #Pull out Geoip countries for analysis table
     if ( $_ =~ m/check_badcountries: GeoIP Country: (.*)/ ) {
-        $found_countries{$1}++;
+        if ($found_countries{$1}++ ==0) {
+			#Here if first time inserted
+			$found_countries_count_ids{$1} = $single_geoip_count_id;
+			$single_geoip_count_id++;
+		}
         $total_countries++;
+        push_table_count_ids($CurrentMailId,$found_countries_count_ids{$1},$total_geoip_count_id);
+        wh_log("Country $1 ".$found_countries_count_ids{$1});
     }
 
     #Pull out DMARC approvals
@@ -621,7 +641,7 @@ LINE: while (<>) {
     if ( $log_items[1] =~ m/$DomainName/ ) {    #bjr
         $localsendtotal++;
         $counts{$abshour}{$CATLOCAL}++;
-        push_count_ids( $CurrentMailId, $abshour, $CATLOCAL );
+        push_stats_count_ids( $CurrentMailId, $abshour, $CATLOCAL );
         $localflag = 1;
     }
 
@@ -634,7 +654,7 @@ LINE: while (<>) {
         #Remote user
         $localflag = 1;
         $counts{$abshour}{$CATRELAY}++;
-        push_count_ids( $CurrentMailId, $abshour, $CATRELAY );
+        push_stats_count_ids( $CurrentMailId, $abshour, $CATRELAY );
     }
 
     elsif ( ( $log_items[2] =~ m/$WebmailIP/ )
@@ -645,7 +665,7 @@ LINE: while (<>) {
         $localflag = 1;
         $WebMailsendtotal++;
         $counts{$abshour}{$CATWEBMAIL}++;
-        push_count_ids( $CurrentMailId, $abshour, $CATWEBMAIL );
+        push_stats_count_ids( $CurrentMailId, $abshour, $CATWEBMAIL );
         $WebMailflag = 1;
     }
 
@@ -662,7 +682,7 @@ LINE: while (<>) {
                 $mailmansendcount++;
                 $localsendtotal++;
                 $counts{$abshour}{$CATMAILMAN}++;
-                push_count_ids( $CurrentMailId, $abshour, $CATMAILMAN );
+                push_stats_count_ids( $CurrentMailId, $abshour, $CATMAILMAN );
 
                 $localflag = 1;
             }
@@ -689,7 +709,7 @@ LINE: while (<>) {
                             $localflag = 1;
                             $WebMailsendtotal++;
                             $counts{$abshour}{$CATWEBMAIL}++;
-                            push_count_ids( $CurrentMailId, $abshour,
+                            push_stats_count_ids( $CurrentMailId, $abshour,
                                 $CATWEBMAIL );
                             $WebMailflag = 1;
                         }
@@ -698,7 +718,7 @@ LINE: while (<>) {
                         $localflag = 1;
                         $WebMailsendtotal++;
                         $counts{$abshour}{$CATWEBMAIL}++;
-                        push_count_ids( $CurrentMailId, $abshour, $CATWEBMAIL );
+                        push_stats_count_ids( $CurrentMailId, $abshour, $CATWEBMAIL );
                         $WebMailflag = 1;
                     }
                 }
@@ -710,13 +730,13 @@ LINE: while (<>) {
     if ( $log_items[0] =~ m/$FetchmailIP/ ) {
         $localAccepttotal++;
         $counts{$abshour}{$CATFETCHMAIL}++;
-        push_count_ids( $CurrentMailId, $abshour, $CATFETCHMAIL );
+        push_stats_count_ids( $CurrentMailId, $abshour, $CATFETCHMAIL );
 
     }
     elsif ( $log_items[3] =~ m/$FETCHMAIL/ ) {
         $localAccepttotal++;
         $counts{$abshour}{$CATFETCHMAIL}++;
-        push_count_ids( $CurrentMailId, $abshour, $CATFETCHMAIL );
+        push_stats_count_ids( $CurrentMailId, $abshour, $CATFETCHMAIL );
     }
 
 # and adjust for recipient field if not set-up by denying plugin - extract from deny msg
@@ -769,42 +789,42 @@ LINE: while (<>) {
         if ( $log_items[5] eq 'check_earlytalker' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_relay' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_norelay' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'require_resolvable_fromhost' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_basicheaders' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'rhsbl' ) {
             $RBLcount++;
             $counts{$abshour}{$CATRBLDNS}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
             mark_domain_rejected($proc);
             $blacklistURL{ get_domain( $log_items[7] ) }++;
         }
@@ -812,7 +832,7 @@ LINE: while (<>) {
         elsif ( $log_items[5] eq 'dnsbl' ) {
             $RBLcount++;
             $counts{$abshour}{$CATRBLDNS}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
             mark_domain_rejected($proc);
             $blacklistURL{ get_domain( $log_items[7] ) }++;
         }
@@ -820,84 +840,84 @@ LINE: while (<>) {
         elsif ( $log_items[5] eq 'check_badmailfrom' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_badrcptto_patterns' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_badrcptto' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_spamhelo' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_goodrcptto extn' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'rcpt_ok' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'pattern_filter' ) {
             $PatternFilterCount++;
             $counts{$abshour}{$CATEXECUT}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATEXECUT );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATEXECUT );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'virus::pattern_filter' ) {
             $PatternFilterCount++;
             $counts{$abshour}{$CATEXECUT}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATEXECUT );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATEXECUT );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_goodrcptto' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_smtp_forward' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'count_unrecognized_commands' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_badcountries' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATBADCOUNTRIES}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATBADCOUNTRIES );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATBADCOUNTRIES );
             mark_domain_rejected($proc);
         }
 
@@ -906,7 +926,7 @@ LINE: while (<>) {
         elsif ( $log_items[5] eq 'spamassassin' ) {
             $above15++;
             $counts{$abshour}{$CATSPAMDEL}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATSPAMDEL );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATSPAMDEL );
 
             # and extract the spam score
             if ( $log_items[8] =~ "Yes, score=(.*) required=([0-9\.]+)" ) {
@@ -920,7 +940,7 @@ LINE: while (<>) {
         {
             $infectedcount++;
             $counts{$abshour}{$CATVIRUS}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATVIRUS );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATVIRUS );
 
             #extract the virus name
             if ( $log_items[7] =~ "Virus found: (.*)" ) {
@@ -945,13 +965,13 @@ LINE: while (<>) {
                     if ( $score < $SATagLevel ) {
                         $hamcount++;
                         $counts{$abshour}{$CATHAM}++;
-                        push_count_ids( $CurrentMailId, $abshour, $CATHAM );
+                        push_stats_count_ids( $CurrentMailId, $abshour, $CATHAM );
                         $hamavg += $score;
                     }
                     else {
                         $spamcount++;
                         $counts{$abshour}{$CATSPAM}++;
-                        push_count_ids( $CurrentMailId, $abshour, $CATSPAM );
+                        push_stats_count_ids( $CurrentMailId, $abshour, $CATSPAM );
                         $spamavg += $score;
                         $result = "spam";
                     }
@@ -967,7 +987,7 @@ LINE: while (<>) {
                 # no SA score - treat it as ham
                 $hamcount++;
                 $counts{$abshour}{$CATHAM}++;
-                push_count_ids( $CurrentMailId, $abshour, $CATHAM );
+                push_stats_count_ids( $CurrentMailId, $abshour, $CATHAM );
 
             }
             if ( ( $currentrcptdomain{$proc} || '' ) ne '' ) {
@@ -979,28 +999,28 @@ LINE: while (<>) {
         elsif ( $log_items[5] eq 'tls' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'auth::auth_cvm_unix_local' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'earlytalker' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'uribl' ) {
             $RBLcount++;
             $counts{$abshour}{$CATRBLDNS}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
             mark_domain_rejected($proc);
             $blacklistURL{ get_domain( $log_items[7] ) }++;
         }
@@ -1011,20 +1031,20 @@ LINE: while (<>) {
             if ( $log_items[7] =~ m/(karma)/ ) {
                 $MiscDenyCount++;
                 $counts{$abshour}{$CATKARMA}++;
-                push_count_ids( $CurrentMailId, $abshour, $CATKARMA );
+                push_stats_count_ids( $CurrentMailId, $abshour, $CATKARMA );
                 mark_domain_rejected($proc);
             }
             elsif ( $log_items[7] =~ m/(dnsbl)/ ) {
                 $RBLcount++;
                 $counts{$abshour}{$CATRBLDNS}++;
-                push_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
+                push_stats_count_ids( $CurrentMailId, $abshour, $CATRBLDNS );
                 mark_domain_rejected($proc);
                 $blacklistURL{ get_domain( $log_items[7] ) }++;
             }
             elsif ( $log_items[7] =~ m/(helo)/ ) {
                 $MiscDenyCount++;
                 $counts{$abshour}{$CATNONCONF}++;
-                push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+                push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
                 mark_domain_rejected($proc);
             }
             else {
@@ -1032,7 +1052,7 @@ LINE: while (<>) {
                 #Unidentified Naughty rejection
                 $MiscDenyCount++;
                 $counts{$abshour}{$CATNONCONF}++;
-                push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+                push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
                 mark_domain_rejected($proc);
                 $unrecog_plugin{ $log_items[5] . "-" . $log_items[7] }++;
             }
@@ -1040,77 +1060,77 @@ LINE: while (<>) {
         elsif ( $log_items[5] eq 'resolvable_fromhost' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'loadcheck' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATLOAD}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATLOAD );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATLOAD );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'karma' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATKARMA}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATKARMA );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATKARMA );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'dmarc' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATDMARC}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATDMARC );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATDMARC );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'relay' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'headers' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'mailfrom' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'badrcptto' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'helo' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'check_smtp_forward' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
         elsif ( $log_items[5] eq 'sender_permitted_from' ) {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
         }
 
@@ -1118,7 +1138,7 @@ LINE: while (<>) {
         else {
             $MiscDenyCount++;
             $counts{$abshour}{$CATNONCONF}++;
-            push_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
+            push_stats_count_ids( $CurrentMailId, $abshour, $CATNONCONF );
             mark_domain_rejected($proc);
             $unrecog_plugin{ $log_items[5] }++;
         }
@@ -1762,9 +1782,10 @@ if ( !$disabled ) {
         print $$str{"f1"};
     }
 
-    show_recip_usage();
 
   DISPLAYTABLES:
+
+    show_recip_usage();
 
     if   ( $infectedcount > 0 ) { show_virus_variants(); }
     else                        { $virus_caption = ""; @{$virus_table} = {}; }
@@ -2491,7 +2512,11 @@ sub show_Geoip_results
                     push( @{$geoip_cols}, { col => "$country\t\t" } );
                     push(
                         @{$geoip_cols},
-                        { col => "\t$found_countries{$country}" }
+                        { col => "\t$found_countries{$country}", 
+                          categ => "Country Rejected (geoip)",
+                          hour => "Country is:".$country,
+                          id    => $found_countries_count_ids{$country}
+						}
                     );
 					my $percentcol = sprintf( '%4.1f%%', $percent );
 					$percentcol .= $reject;
@@ -2698,7 +2723,6 @@ sub save_data
     my $port = esmith::ConfigDB->open_ro->get('mailstats')->prop('DBPort')
       || "3306";
 
-    #print "Saving data..";
     my $dbh = DBI->connect( "DBI:mysql:database=$DBname;host=$host;port=$port",
         "mailstats", "mailstats" )
       or die "Cannot open mailstats db - has it beeen created?";
@@ -3205,7 +3229,7 @@ sub get_domain {
     return $domain;
 }
 
-sub push_count_ids {
+sub push_stats_count_ids {
     my $CurrentMailId = shift;
     my $abshour       = shift;
     my $CATEGORY      = shift;
@@ -3235,12 +3259,31 @@ sub push_count_ids {
     );
 }
 
+sub push_table_count_ids {
+    my $CurrentMailId = shift;
+    my $single_countid  = shift;
+    my $total_countid = shift;
+    push( @emails_per_count_id,
+        { mailid => $CurrentMailId, 
+		  countid => $single_countid 
+		 }
+    );
+    push(
+        @emails_per_count_id,
+        {   mailid  => $CurrentMailId,
+            countid => $total_countid
+        }
+    );
+}
+
+
+
 sub wh_log {
     my $msg         = shift;
-    my $debug       = 0;
-    my $nodebugfile = 1;
+    my $debug       = 1;
+    my $nodebugfile = 0;
     my $logfile     = "mailstats.log";
-    my $fullmsg     = strftime("Y-m-d H:i:s") . "| " . $msg . "\n";
+    my $fullmsg     = strftime("%F %T" ,localtime) . "| " . $msg . "\n";
     if ($debug) { print $fullmsg; }
     if ( !$nodebugfile ) {
         open( FILE, ">> $logfile" ) || die "problem opening $logfile\n";

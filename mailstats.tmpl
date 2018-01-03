@@ -198,7 +198,16 @@
 		<TMPL_ELSE>
 			<tr>
 			<TMPL_LOOP NAME=cols>
-					<td><TMPL_VAR NAME=col></td>
+					<TMPL_IF NAME="__inner__">
+						<td>
+							<a href="http://<TMPL_VAR NAME=DOMAIN>/mailstats/mailstats-detail.php?id=<TMPL_VAR NAME=id>&co=<TMPL_VAR NAME=col>&ca=<TMPL_VAR NAME=categ>&hr=<TMPL_VAR NAME=hour>&dt=<TMPL_VAR NAME=DATEID>&sn=<TMPL_VAR NAME='SERVERNAME'>" target="_blank"><TMPL_VAR NAME=col></a>
+						</td>
+			<TMPL_ELSE>					
+						<td>
+							<TMPL_VAR NAME=col>
+						</td>
+				
+			</TMPL_IF>				
 			</TMPL_LOOP>			
 		</TMPL_IF>
 		</tr>
