@@ -27,6 +27,8 @@
 # bjr - 16dec16 - Fix dnsbl code to deal with psbl.surriel.com  - Bug 9717
 # bjr - 16Dec16 - Change geopip table code to show even if no exclusions found (assuming geoip data found) - Bug 9888
 # bjr - 30Apr17 - Change Categ index code - Bug 9888 again
+# bjr - 18Dec19 - Sort out a few format problems and also remove some debugging crud - Bug 10858
+# bjr - 18Dec19 - change to fix truncation of email address in by email table - bug 10327
 #
 #############################################################################
 #
@@ -49,6 +51,7 @@
 #            / Interval - "daily", "weekly", "fortnightly", "monthly", "99999" - last is number of hours (default is daily)
 #            / Base - "Midnight", "Midday", "Now", "99" hour (0-23) (default is midnight)
 #						 / HTMLEmail - "yes", "no", "both" - default is "No" - Send email in HTML
+#            NOT YET INUSE - WIP!
 #						 / HTMLPage - "yes"  / "no"  - default is "yes" if HTMLEmail is "yes" or "both" otherwise "no"
 #
 #############################################################################
@@ -98,7 +101,7 @@ if ($cdb->get('mailstats')){
 
 #Configuration section
 my %opt = (
-    version => '0.7.12',                        # please update at each change.
+    version => '0.7.13',                        # please update at each change.
     debug => 0,                                 # guess what ?
     sendmail => '/usr/sbin/sendmail',           # Path to sendmail stub
     from => 'spamfilter-stats',                 # Who is the mail from
@@ -250,7 +253,6 @@ my $DMARC_Report_emails = ""; #Flat string of all email addresses
 	 my $result = $dbix->query("select rua from report_policy_published;");
 	 $result->bind(my ($emailaddress));
 	 while ($result->fetch){
-			#print STDERR "$emailaddress";
 			#remember email from logterse entry has chevrons round it - so we add them here to guarantee the alighment of the match
 			#Remove the mailto:
 			$emailaddress =~ s/mailto://g;
@@ -262,7 +264,6 @@ my $DMARC_Report_emails = ""; #Flat string of all email addresses
 	} else { $DMARC_Report_emails = "None found - DB not opened"}
 
 
-#dbg("DMARC-EMAILS:".$DMARC_Report_emails); 
 
 # and setup list of local domains for spotting the local one in a list of email addresses (Remote station processing)
 use esmith::DomainsDB;
@@ -271,7 +272,6 @@ my @domains = $d->keys();
 my $alldomains = "(";
 foreach my $dom (@domains){$alldomains .= $dom."|"}
 $alldomains .= ")";
-#print $alldomains;
 
 # Saving the Log lines processed
 my %LogLines = ();  #Save all the log lines processed for writing to the DB
@@ -304,7 +304,6 @@ if ($cdb->get('mxbackup')){
 
 my ( $start, $end ) = analysis_period();
 
-dbg("Time interval:".strftime("%a %b %e %H:%M:%S %Y", localtime($start))."->".strftime("%a %b %e %H:%M:%S %Y", localtime($end))."\n");
 
 #
 # First check current configuration for logging, DNS enable and Max threshold for spamassassin
@@ -358,8 +357,6 @@ if ($cdb->get('mailstats')){
 		$savedata = $false;
 	}
 	$enableblacklist = ($cdb->get('qpsmtpd')->prop("RHSBL") || "disabled") eq "enabled" || ($cdb->get('qpsmtpd')->prop("URIBL") || "disabled") eq "enabled";
-	#$savedata = $false;  #TEMP!!
-#if ($savedata){print STDERR "yes"} else {print STDERR "no"}
 
 my $makeHTMLemail = "no";
 #if ($cdb->get('mailstats')){$makeHTMLemail = $cdb->get('mailstats')->prop('HTMLEmail') || "no"} #TEMP!!
@@ -424,13 +421,8 @@ my $CurrentMailId = "";
 
 LINE: while (<>) {
 
-		#print STDERR $starttai,$endtai,$_,"\n";
-		
-
     next LINE if !(my($tai,$log) = split(' ',$_,2));
-    #dbg("TAI:".$tai);
 
-    #dbg("REST1:".$log);
     
     #If date specified, only process lines matching date
     next LINE if ( $tai lt $starttai );
@@ -439,7 +431,6 @@ LINE: while (<>) {
 		#Count lines and skip out if debugging
 		$count++;
 		#last LINE if ($opt{debug} && $count >= 100);
-    #dbg("REST:".$log);
 			
 
 		#Loglines to Saved String for later DB write
@@ -448,7 +439,7 @@ LINE: while (<>) {
 			$CurrentLine = /^\@([0-9a-z]*) ([0-9]*) .*$/;
 			my $l = length($CurrentLine);
 			if ($l != 0){
-				if (defined($2)){		#print STDERR "Undefined \$2:".$_.":".$count.":".$l;exit}
+				if (defined($2)){	
 					if ($2 ne $CurrentMailId) {
 						print "CL:$CurrentLine*\n" if !defined($1);
 						$CurrentLogId = $1."-".$2;
@@ -459,8 +450,6 @@ LINE: while (<>) {
 					$LogLines{$CurrentLogId.":".$Sequence} = $_;
 				}
 			}
-			#print STDERR $CurrentLogId.":".$LogLines{$CurrentLogId}."\n";
-			#exit
 		}
 
 
@@ -468,7 +457,6 @@ LINE: while (<>) {
     if ( $_ =~m/spamassassin: pass, Ham,(.*)</ )
     #if ( $_ =~m/spamassassin plugin.*: check_spam:.*hits=(.*), required.*tests=(.*)/ )
     {
-		 #dbg("SPAM:".$log);
 		 #New version does not seem to have spammassasin tests in logs 
 		 #if (exists($2){  
 			 #my (@SAtests) = split(',',$2);
@@ -518,27 +506,10 @@ LINE: while (<>) {
     my $emailnum = $proc; #proc gets modified later...
 
     if ($emailnum == 23244) {
-			dbg("TM0:".$timestamp_items[0]);
-			dbg("TM1:".$timestamp_items[1]);
-			dbg("TM2:".$timestamp_items[2]);
-			dbg("TM3:".$timestamp_items[3]);
-			dbg("LOG0:".$log_items[0]);
-			dbg("LOG1:".$log_items[1]);
-			dbg("LOG2:".$log_items[2]);
-			dbg("LOG3:".$log_items[3]);
-			dbg("LOG4:".$log_items[4]);
-			dbg("LOG5:".$log_items[5]);
-			dbg("LOG6:".$log_items[6]);
-			dbg("LOG7:".$log_items[7]);
-			dbg("IPregexp:".$localIPregexp);
-			if (!test_for_private_ip($log_items[0])) {dbg("Log0 not found");}
-			if (test_for_private_ip($log_items[2])){ dbg("Log2 match")} 
-			if ($log_items[5] eq "queued") {dbg("LOG5 match")}
 		}
 		
     $totalexamined++;
 
-#		dbg("LOG8:".$log_items[8]);
 		
     # first spot the fetchmail and local deliveries.
 
@@ -546,7 +517,6 @@ LINE: while (<>) {
     $localflag   = 0;
     $WebMailflag = 0;
     if ( $log_items[1] =~ m/$DomainName/ ) {  #bjr
-				#dbg("LOG1-Found:".$log_items[1]);
         $localsendtotal++;
         $counts{$abshour}{$CATLOCAL}++;
         $localflag = 1;
@@ -562,22 +532,6 @@ LINE: while (<>) {
 
 		elsif (($log_items[2] =~ m/$WebmailIP/) and (!test_for_private_ip($log_items[0]))) {
 			#Webmail
-#			if ($emailnum == 19608){
-				dbg("WEBMAIL:");
-				dbg("TM0:".$timestamp_items[0]);
-				dbg("TM1:".$timestamp_items[1]);
-				dbg("TM2:".$timestamp_items[2]);
-				dbg("TM3:".$timestamp_items[3]);
-				dbg("LOG0:".$log_items[0]);
-				dbg("LOG1:".$log_items[1]);
-				dbg("LOG2:".$log_items[2]);
-				dbg("LOG3:".$log_items[3]);
-				dbg("LOG4:".$log_items[4]);
-				dbg("LOG5:".$log_items[5]);
-				dbg("LOG6:".$log_items[6]);
-				dbg("LOG7:".$log_items[7]);
-				#exit;
-#			}
 			$localflag = 1;
 			$WebMailsendtotal++;
 			$counts{$abshour}{$CATWEBMAIL}++;
@@ -599,7 +553,6 @@ LINE: while (<>) {
             }
             else {
 								#Or sent to the DMARC server
-								#dbg("LOG4:".$log_items[4]);
 								#check for email address in $DMARC_Report_emails string
 								my $logemail = $log_items[4];
 								if ((index($DMARC_Report_emails,$logemail)>=0) or ($logemail =~ m/$DMARCDomain/)){
@@ -608,9 +561,7 @@ LINE: while (<>) {
 									$localflag = 1;
 								}
 								else {
-									#print STDERR "no match:.".$logemail;
 									if (exists $log_items[8]){
-										#dbg("LOG8:".$log_items[8]);
 										# ignore incoming localhost spoofs
 										if ( $log_items[8] =~ m/msg denied before queued/ ) { }
 										else {
@@ -634,7 +585,6 @@ LINE: while (<>) {
 
     # try to spot fetchmail emails
     if ( $log_items[0] =~ m/$FetchmailIP/ ) {
-				#dbg("LOG0:".$log_items[0]);
         $localAccepttotal++;
         $counts{$abshour}{$CATFETCHMAIL}++;
     }
@@ -646,12 +596,10 @@ LINE: while (<>) {
 # and adjust for recipient field if not set-up by denying plugin - extract from deny msg
 
     if ( length( $log_items[4] ) == 0 ) {
-        #dbg("LOG7:".$log_items[0]);
         if ( $log_items[5] eq 'check_goodrcptto' ) {
             if ( $log_items[7] gt "invalid recipient" ) {
                 $log_items[4] =
-                  substr( $log_items[7], 18 );    #Leave only email address
-                #dbg("LOG4:".$log_items[0]);
+                  substr( $log_items[7], 16 );    #Leave only email address
 
             }
         }
@@ -660,7 +608,6 @@ LINE: while (<>) {
     #        if ( ( $currentrcptdomain{ $proc } || '' ) eq '' ) {
     # reduce to lc and process each e,mail if a list, pseperatedy commas
     my $recipientmail = lc( $log_items[4] );
-    #dbg("LOG4:".$log_items[0]);    
     if ( $recipientmail =~ m/.*,/ ) {
 
         #comma - split the line and deal with each domain
@@ -758,7 +705,6 @@ LINE: while (<>) {
 						#extract the virus name
 						if ($log_items[7] =~ "Virus found: (.*)" ) {$found_viruses{$1}++;}
 						else {$found_viruses{$log_items[7]}++} #Some other message!!
-						#dbg("LOG7:".$log_items[7]);
 						mark_domain_rejected($proc);
 		}
 
@@ -978,7 +924,7 @@ if ( !$disabled ) {
     print "Period Ending    : ", strftime( "%c", localtime($end) ),   "\n";
     print "Clam Version/DB Count/Last DB update: ",`freshclam -V`;
     print "SpamAssassin Version : ",`spamassassin -V`;
-    printf "Tag level: %3d; Reject level: %3d $warnnoreject\n", $SATagLevel,$SARejectLevel;
+    printf "Tag level: %3d; Reject level: %-3d $warnnoreject\n", $SATagLevel,$SARejectLevel;
     if ($HighLogLevel) {
       printf "*Loglevel is set to: ".$LogLevel. " - you only need it set to 6\n";
       printf "\tYou can set it this way:\n";
@@ -986,14 +932,14 @@ if ( !$disabled ) {
       printf "\tsignal-event email-update\n";
       printf "\tsv t /var/service/qpsmtpd\n";
     }
-    printf "Reporting Period : %.2f hrs\n", $hrsinperiod;
-    printf "All SMTP connections accepted:%8d          \n", $totalexamined;
-    printf "Emails per hour              : %8.1f/hr\n", $emailperhour || 0;
-    printf "Average spam score (accepted): %11.2f\n", $spamavg       || 0;
-    printf "Average spam score (rejected): %11.2f\n", $rejectspamavg || 0;
-    printf "Average ham score            : %11.2f\n", $hamavg        || 0;
-    printf "Number of DMARC reporting emails sent:\t%11d (not shown on table)\n", $DMARCSendCount      || 0;
-    if ($hamcount != 0){ printf "Number of emails approved through DMARC:\t%11d (%3d%% of Ham count)\n", $DMARCOkCount|| 0,$DMARCOkCount*100/$hamcount || 0;}
+    printf "Reporting Period : %-.2f hrs\n", $hrsinperiod;
+    printf "All SMTP connections accepted:%-8d          \n", $totalexamined;
+    printf "Emails per hour              : %-8.1f/hr\n", $emailperhour || 0;
+    printf "Average spam score (accepted): %-11.2f\n", $spamavg       || 0;
+    printf "Average spam score (rejected): %-11.2f\n", $rejectspamavg || 0;
+    printf "Average ham score            : %-11.2f\n", $hamavg        || 0;
+    printf "Number of DMARC reporting emails sent:\t%-11d (not shown on table)\n", $DMARCSendCount      || 0;
+    if ($hamcount != 0){ printf "Number of emails approved through DMARC:\t%-11d (%-3d%% of Ham count)\n", $DMARCOkCount|| 0,$DMARCOkCount*100/$hamcount || 0;}
     
     my $smeoptimizerprog = "/usr/local/smeoptimizer/SMEOptimizer.pl";
     if (-e $smeoptimizerprog) { 
@@ -1921,19 +1867,6 @@ sub get_dateid
  sub dump_entries
  {
 	my $msg = shift;
-	#dbg($msg); 
-	#dbg("TM0:".$timestamp_items[0]);
-	#dbg("TM1:".$timestamp_items[1]);
-	#dbg("TM2:".$timestamp_items[2]);
-	#dbg("TM3:".$timestamp_items[3]);
-	#dbg("LOG0:".$log_items[0]);
-	#dbg("LOG1:".$log_items[1]);
-	#dbg("LOG2:".$log_items[2]);
-	#dbg("LOG3:".$log_items[3]);
-	#dbg("LOG4:".$log_items[4]);
-	#dbg("LOG5:".$log_items[5]);
-	#dbg("LOG6:".$log_items[6]);
-	#dbg("LOG7:".$log_items[7]);
 	#if ($opt{debug} == 1){exit;}
 }
 
